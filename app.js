@@ -6,7 +6,8 @@ const ejs = require("ejs");
 const bodyParser = require("body-parser");
 const mongoose = require("mongoose");
 const dotenv = require("dotenv");
-const encrypt = require("mongoose-encryption");
+// const encrypt = require("mongoose-encryption");
+const md5 = require("md5");
 
 dotenv.config();
 
@@ -37,7 +38,8 @@ const userSchema = new mongoose.Schema({
 // but, we ony want to encrypt password
 // encryption is done when we save() a doc
 // decryption is done when we find() a doc
-userSchema.plugin(encrypt, {secret : SECRET, encryptedFields: ["password"]});
+
+// userSchema.plugin(encrypt, {secret : SECRET, encryptedFields: ["password"]});
 
 // new collection named users
 const User = new mongoose.model("User", userSchema);
@@ -62,7 +64,9 @@ app.get("/register", function(req, res)
 app.post("/register", function(req, res)
 {
     const username = req.body.username;
-    const password = req.body.password;
+    
+    // we will hash the password
+    const password = md5(req.body.password);
 
     const newUser = new User({
         email : username,
@@ -87,7 +91,9 @@ app.post("/register", function(req, res)
 app.post("/login", function(req, res)
 {
     const username = req.body.username;
-    const password = req.body.password;
+
+    // we use hashed password to find the password match
+    const password = md5(req.body.password);
     
     User.findOne({email : username}, function(err, foundUser)
     {
