@@ -7,7 +7,15 @@ const bodyParser = require("body-parser");
 const mongoose = require("mongoose");
 const dotenv = require("dotenv");
 // const encrypt = require("mongoose-encryption");
-const md5 = require("md5");
+
+// pacage for hash function
+// const md5 = require("md5");
+
+// we will use bcrypt for hashing instead of md5, as it is more secure
+const bcrypt = require("bcrypt");
+
+// defining no of salt rounds
+const saltRounds = 10;
 
 dotenv.config();
 
@@ -64,25 +72,30 @@ app.get("/register", function(req, res)
 app.post("/register", function(req, res)
 {
     const username = req.body.username;
+    const password = req.body.password;
+
+    // using bcrypt to hash the password
+    // whatever hash is generated after salting, use that for password
+    bcrypt.hash(password, saltRounds, function(err, hash) {
+        const newUser = new User({
+            email : username,
+            password : hash
+        });
+        newUser.save(function(err)
+        {
+            if(err)
+            {
+                console.log(err);
+            }
+            else
+            {
+                res.render("secrets");
+            }
+        });
+    });
     
     // we will hash the password
-    const password = md5(req.body.password);
-
-    const newUser = new User({
-        email : username,
-        password : password
-    });
-    newUser.save(function(err)
-    {
-        if(err)
-        {
-            console.log(err);
-        }
-        else
-        {
-            res.render("secrets");
-        }
-    });
+    // const password = md5(req.body.password);
 });
 
 // get data from login form and check if the user exists or not
@@ -93,7 +106,7 @@ app.post("/login", function(req, res)
     const username = req.body.username;
 
     // we use hashed password to find the password match
-    const password = md5(req.body.password);
+    const password = req.body.password;
     
     User.findOne({email : username}, function(err, foundUser)
     {
@@ -105,10 +118,14 @@ app.post("/login", function(req, res)
         {
             if(foundUser)
             {
-                if(foundUser.password === password)
-                {
-                    res.render("secrets");
-                }    
+                // using bcrypt to cmpare the password with hashed password, and find it
+                // we compare the password with the hashed password stored on db
+                bcrypt.compare(password, foundUser.password, function(err, result) {
+                    {
+                        if(result === true)
+                        res.render("secrets");
+                    } 
+                });   
             }
             else
             console.log("no user found");
